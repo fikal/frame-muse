@@ -63,7 +63,7 @@ public sealed class ComfyUiImageGenerator(HttpClient http, IOptions<WorkerOption
         using var promptDoc = JsonDocument.Parse(graph);
         var submit = new { prompt = promptDoc.RootElement, client_id = "fraimic-worker" };
 
-        using var resp = await http.PostAsJsonAsync($"{baseUrl}/prompt", submit, ct);
+        using HttpResponseMessage resp = await PostToComfyAsync(baseUrl, submit, ct);
         if (!resp.IsSuccessStatusCode)
             throw new InvalidOperationException($"ComfyUI /prompt {(int)resp.StatusCode}: {await resp.Content.ReadAsStringAsync(ct)}");
         var queued = await resp.Content.ReadFromJsonAsync<QueueResponse>(cancellationToken: ct);
@@ -104,6 +104,22 @@ public sealed class ComfyUiImageGenerator(HttpClient http, IOptions<WorkerOption
         throw new TimeoutException($"ComfyUI job {promptId} did not finish within {_opt.GenerationTimeoutSeconds}s.");
     }
 
+    /// <summary>POST the workflow, turning a connection failure into a friendly, actionable error —
+    /// without ComfyUI, AI jobs fail with guidance while plain photo uploads keep working.</summary>
+    private async Task<HttpResponseMessage> PostToComfyAsync(string baseUrl, object submit, CancellationToken ct)
+    {
+        try
+        {
+            return await http.PostAsJsonAsync($"{baseUrl}/prompt", submit, ct);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new InvalidOperationException(
+                $"The image engine (ComfyUI) isn't reachable at {baseUrl} — is it running on the studio PC? " +
+                "Plain photo uploads still work without it.", ex);
+        }
+    }
+
     private static string ExtractError(JsonElement status)
     {
         if (status.TryGetProperty("messages", out var msgs) && msgs.ValueKind == JsonValueKind.Array)
@@ -123,7 +139,18 @@ public sealed class ComfyUiImageGenerator(HttpClient http, IOptions<WorkerOption
         part.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
         form.Add(part, "image", $"ref_{Guid.NewGuid():N}.jpg");
         form.Add(new StringContent("true"), "overwrite");
-        using var resp = await http.PostAsync($"{baseUrl}/upload/image", form, ct);
+        HttpResponseMessage resp;
+        try
+        {
+            resp = await http.PostAsync($"{baseUrl}/upload/image", form, ct);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new InvalidOperationException(
+                $"The image engine (ComfyUI) isn't reachable at {baseUrl} — is it running on the studio PC? " +
+                "Plain photo uploads still work without it.", ex);
+        }
+        using HttpResponseMessage response = resp;
         resp.EnsureSuccessStatusCode();
         var body = await resp.Content.ReadFromJsonAsync<UploadResponse>(cancellationToken: ct);
         string name = body?.Name ?? throw new InvalidOperationException("ComfyUI /upload/image returned no name.");

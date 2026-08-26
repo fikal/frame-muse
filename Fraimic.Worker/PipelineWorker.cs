@@ -76,12 +76,16 @@ public sealed class PipelineWorker(
             }
 
             // Screen the reference photo itself (blocks NSFW source material and bare-photo uploads).
-            if (reference is not null && !await safety.IsImageAllowedAsync(reference, ct))
+            if (reference is not null)
             {
-                await repo.UpdateAsync(job.Id, JobStatus.Failed,
-                    (b, u) => u.Add(b.Set(j => j.Error, "The photo can't be used — keep it family-friendly.")), ct);
-                log.LogInformation("Job {Id}: blocked (reference photo).", job.Id);
-                return;
+                ImageVerdict refVerdict = await safety.CheckImageAsync(reference, ct);
+                if (refVerdict != ImageVerdict.Allowed)
+                {
+                    await repo.UpdateAsync(job.Id, JobStatus.Failed,
+                        (b, u) => u.Add(b.Set(j => j.Error, SafetyErrorMessage(refVerdict, "The photo can't be used — keep it family-friendly."))), ct);
+                    log.LogInformation("Job {Id}: reference photo not allowed ({Verdict}).", job.Id, refVerdict);
+                    return;
+                }
             }
 
             byte[] imageBytes;
@@ -104,11 +108,12 @@ public sealed class PipelineWorker(
                 imageBytes = await generator.GenerateAsync(prompt, _opt.GenerationWidth, _opt.GenerationHeight, reference, style: job.Style, ct: ct);
 
                 // 2b) Screen the generated image — the real safety net. Fails closed.
-                if (!await safety.IsImageAllowedAsync(imageBytes, ct))
+                ImageVerdict verdict = await safety.CheckImageAsync(imageBytes, ct);
+                if (verdict != ImageVerdict.Allowed)
                 {
                     await repo.UpdateAsync(job.Id, JobStatus.Failed,
-                        (b, u) => u.Add(b.Set(j => j.Error, "The generated image was blocked by the content filter.")), ct);
-                    log.LogInformation("Job {Id}: blocked (image).", job.Id);
+                        (b, u) => u.Add(b.Set(j => j.Error, SafetyErrorMessage(verdict, "The generated image was blocked by the content filter."))), ct);
+                    log.LogInformation("Job {Id}: image not allowed ({Verdict}).", job.Id, verdict);
                     return;
                 }
             }
@@ -163,6 +168,13 @@ public sealed class PipelineWorker(
             catch { /* best effort */ }
         }
     }
+
+    /// <summary>Turn a non-Allowed verdict into a user-facing message: "screen down" gets actionable
+    /// guidance instead of wrongly implying the image was inappropriate.</summary>
+    private static string SafetyErrorMessage(ImageVerdict verdict, string blockedMessage) =>
+        verdict == ImageVerdict.ScreenUnavailable
+            ? "The safety screen isn't running on the studio PC, so nothing can be sent. Start the NSFW service (see README) or disable SafetyEnabled."
+            : blockedMessage;
 
     private static string Summarize(string message) =>
         message.Length <= 200 ? message : message[..200] + "…";

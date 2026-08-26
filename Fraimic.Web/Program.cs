@@ -36,6 +36,32 @@ if (Uri.TryCreate(canonicalUrl, UriKind.Absolute, out Uri? canonical))
     });
 }
 
+// Optional shared PIN: when FraimicMuse:AccessPin is set, every /api call must carry it (header
+// X-FrameMuse-Pin, or ?pin= for plain download links). The page itself stays open — the front-end
+// prompts for the PIN on the first 401 and remembers it. Leave unset for a trusted LAN.
+string? accessPin = builder.Configuration["FraimicMuse:AccessPin"];
+if (!string.IsNullOrWhiteSpace(accessPin))
+{
+    byte[] pinBytes = System.Text.Encoding.UTF8.GetBytes(accessPin);
+    app.Use(async (ctx, next) =>
+    {
+        if (ctx.Request.Path.StartsWithSegments("/api"))
+        {
+            string supplied = ctx.Request.Headers["X-FrameMuse-Pin"].FirstOrDefault()
+                ?? ctx.Request.Query["pin"].FirstOrDefault()
+                ?? "";
+            if (!System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+                    pinBytes, System.Text.Encoding.UTF8.GetBytes(supplied)))
+            {
+                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await ctx.Response.WriteAsJsonAsync(new { error = "PIN required" });
+                return;
+            }
+        }
+        await next();
+    });
+}
+
 app.UseDefaultFiles();   // serve index.html at /
 
 // Serve the self-signed cert (.cer) so phones can download + trust it for the HTTPS/voice link.

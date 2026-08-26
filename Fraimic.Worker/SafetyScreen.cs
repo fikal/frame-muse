@@ -5,6 +5,17 @@ using Microsoft.Extensions.Options;
 
 namespace Fraimic.Worker;
 
+/// <summary>Outcome of screening an image (see <see cref="SafetyScreen.CheckImageAsync"/>).</summary>
+public enum ImageVerdict
+{
+    /// <summary>Screened and clean — safe to show.</summary>
+    Allowed,
+    /// <summary>Screened and flagged as inappropriate.</summary>
+    Blocked,
+    /// <summary>The screen itself couldn't run (service down) — fail closed, but say so.</summary>
+    ScreenUnavailable,
+}
+
 /// <summary>
 /// Two-layer content safety for the family frame:
 ///  1) <see cref="IsPromptAllowedAsync"/> — the local LLM classifies the raw request (fails OPEN on
@@ -47,10 +58,14 @@ public sealed class SafetyScreen(HttpClient http, IOptions<WorkerOptions> option
         }
     }
 
-    /// <summary>True if the generated image is acceptable. Fails CLOSED (blocks) if the screen errors.</summary>
-    public async Task<bool> IsImageAllowedAsync(byte[] imageBytes, CancellationToken ct = default)
+    /// <summary>
+    /// Screen an image. Fails CLOSED: if the screen can't run, the verdict is
+    /// <see cref="ImageVerdict.ScreenUnavailable"/> and the image must NOT reach the frame — but the
+    /// caller can tell the user to start the service rather than implying the image was inappropriate.
+    /// </summary>
+    public async Task<ImageVerdict> CheckImageAsync(byte[] imageBytes, CancellationToken ct = default)
     {
-        if (!_opt.SafetyEnabled) return true;
+        if (!_opt.SafetyEnabled) return ImageVerdict.Allowed;
         try
         {
             using var content = new ByteArrayContent(imageBytes);
@@ -61,17 +76,20 @@ public sealed class SafetyScreen(HttpClient http, IOptions<WorkerOptions> option
             if (result is null)
             {
                 log.LogError("NSFW screen returned no result; blocking image (fail-closed).");
-                return false;
+                return ImageVerdict.ScreenUnavailable;
             }
             if (result.Nsfw)
+            {
                 log.LogWarning("Image blocked by NSFW screen: {Detections}",
                     string.Join(", ", result.Detections?.Select(d => $"{d.Class}={d.Score}") ?? []));
-            return !result.Nsfw;
+                return ImageVerdict.Blocked;
+            }
+            return ImageVerdict.Allowed;
         }
         catch (Exception ex)
         {
             log.LogError(ex, "NSFW screen unreachable; blocking image (fail-closed). Is nsfw_service.py running?");
-            return false;
+            return ImageVerdict.ScreenUnavailable;
         }
     }
 

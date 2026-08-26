@@ -1,6 +1,23 @@
 // Frame Muse front-end: submit a request, watch it generate, review the preview, send/discard,
 // and manage the recent gallery. Talks only to the Fraimic.Web minimal API.
 const $ = s => document.querySelector(s);
+
+// ---- Optional PIN (server returns 401 on /api when FraimicMuse:AccessPin is set) ----
+let pin = null; try { pin = localStorage.getItem('fm_pin'); } catch {}
+function pinQS(url) { return pin ? url + (url.includes('?') ? '&' : '?') + 'pin=' + encodeURIComponent(pin) : url; }
+async function api(url, opts = {}) {
+  opts.headers = Object.assign({}, opts.headers, pin ? { 'X-FrameMuse-Pin': pin } : {});
+  let r = await fetch(url, opts);
+  if (r.status === 401) {
+    const entered = window.prompt('This Frame Muse is protected — enter the PIN:');
+    if (entered) {
+      pin = entered; try { localStorage.setItem('fm_pin', pin); } catch {}
+      opts.headers['X-FrameMuse-Pin'] = pin;
+      r = await fetch(url, opts);
+    }
+  }
+  return r;
+}
 const promptEl = $('#prompt'), sendBtn = $('#send'), micBtn = $('#mic');
 const statusEl = $('#status'), statusText = $('#statusText'), statusSub = $('#statusSub');
 const dot = $('#dot'), fill = $('#fill'), preview = $('#preview'), previewImg = $('#previewImg'), grid = $('#grid');
@@ -94,11 +111,11 @@ async function submit() {
   const text = promptEl.value.trim();
   if (text.length < 2 && !refImageData) { promptEl.focus(); return; }  // need text OR a photo
   // Re-generating supersedes the current preview — drop it so it doesn't linger.
-  if (previewId) { fetch('/api/jobs/' + previewId, { method:'DELETE' }).catch(()=>{}); }
+  if (previewId) { api('/api/jobs/' + previewId, { method:'DELETE' }).catch(()=>{}); }
   pvActions.classList.remove('show'); preview.style.display = 'none'; previewId = null;
   sendBtn.disabled = true; sendBtn.innerHTML = '<span class="spin"></span>Generating…';
   try {
-    const r = await fetch('/api/jobs', {
+    const r = await api('/api/jobs', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ text, imageBase64: refImageData, style: styleEl.value })
     });
@@ -130,7 +147,7 @@ function resetSend(){ sendBtn.disabled = false; sendBtn.textContent = 'Generate'
 async function poll(id) {
   clearTimeout(pollTimer);
   try {
-    const r = await fetch('/api/jobs/' + id);
+    const r = await api('/api/jobs/' + id);
     if (r.ok) {
       const s = await r.json();
       showStatus(s.status, s.position, s.etaSeconds, s.error, s.thumbnailDataUri);
@@ -158,7 +175,7 @@ $('#pvSend').addEventListener('click', async () => {
   if (!previewId) return;
   const id = previewId;
   try {
-    const r = await fetch('/api/jobs/' + id + '/send', { method:'POST' });
+    const r = await api('/api/jobs/' + id + '/send', { method:'POST' });
     if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error || 'failed'); }
     previewId = null;
     pvActions.classList.remove('show'); preview.style.display = 'none';
@@ -172,7 +189,7 @@ $('#pvDiscard').addEventListener('click', async () => {
   const id = previewId; previewId = null;
   pvActions.classList.remove('show'); preview.style.display='none'; statusEl.classList.remove('show');
   resetSend();
-  if (id) { try { await fetch('/api/jobs/' + id, { method:'DELETE' }); } catch {} }
+  if (id) { try { await api('/api/jobs/' + id, { method:'DELETE' }); } catch {} }
 });
 
 sendBtn.addEventListener('click', submit);
@@ -184,7 +201,7 @@ function showToast(msg) { toast.textContent = msg; toast.classList.add('show'); 
 
 async function loadRecent() {
   try {
-    const r = await fetch('/api/recent'); if (!r.ok) return;
+    const r = await api('/api/recent'); if (!r.ok) return;
     const items = await r.json();
     grid.innerHTML = '';
     for (const it of items) {
@@ -193,7 +210,7 @@ async function loadRecent() {
       const img = document.createElement('img'); img.src = it.thumbnailDataUri; img.alt = it.rawInput || '';
       const ops = document.createElement('div'); ops.className = 'ops';
       const send = document.createElement('button'); send.textContent = 'Frame';
-      const save = document.createElement('a'); save.textContent = 'Save'; save.href = '/api/jobs/' + it.id + '/image'; save.setAttribute('download', 'frame-muse.jpg');
+      const save = document.createElement('a'); save.textContent = 'Save'; save.href = pinQS('/api/jobs/' + it.id + '/image'); save.setAttribute('download', 'frame-muse.jpg');
       const del = document.createElement('button'); del.className = 'del'; del.textContent = 'Del';
       send.addEventListener('click', () => resend(it.id, tile));
       del.addEventListener('click', () => remove(it.id, tile));
@@ -205,7 +222,7 @@ async function loadRecent() {
 async function resend(id, tile) {
   tile.classList.add('busy');
   try {
-    const r = await fetch('/api/jobs/' + id + '/resend', { method: 'POST' });
+    const r = await api('/api/jobs/' + id + '/resend', { method: 'POST' });
     if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error || 'failed'); }
     showToast('Sending to the frame…');
   } catch (e) { showToast(e.message); }
@@ -216,7 +233,7 @@ async function remove(id, tile) {
   if (!confirm('Delete this image from the gallery?')) return;
   tile.classList.add('busy');
   try {
-    const r = await fetch('/api/jobs/' + id, { method: 'DELETE' });
+    const r = await api('/api/jobs/' + id, { method: 'DELETE' });
     if (!r.ok) throw new Error('delete failed');
     tile.remove(); showToast('Deleted.');
   } catch (e) { showToast(e.message); tile.classList.remove('busy'); }

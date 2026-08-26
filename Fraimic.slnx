@@ -4,4 +4,5 @@
   <Project Path="Fraimic.Web/Fraimic.Web.csproj" />
   <Project Path="Fraimic.Worker/Fraimic.Worker.csproj" />
   <Project Path="FraimicBin/FraimicBin.csproj" />
+  <Project Path="Fraimic.Tests/Fraimic.Tests.csproj" />
 </Solution>
