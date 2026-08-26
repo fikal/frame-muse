@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Fraimic.API/Fraimic.API.csproj" />
+  <Project Path="Fraimic.Core/Fraimic.Core.csproj" />
+  <Project Path="Fraimic.Web/Fraimic.Web.csproj" />
+  <Project Path="Fraimic.Worker/Fraimic.Worker.csproj" />
+  <Project Path="FraimicBin/FraimicBin.csproj" />
+</Solution>

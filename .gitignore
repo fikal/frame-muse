@@ -1,0 +1,22 @@
+# Build output
+bin/
+obj/
+publish/
+*.user
+
+# IDE
+.vs/
+.idea/
+
+# Machine-specific config (real credentials / personal paths) — never commit
+appsettings.Local.json
+Start-FraimicStudio.local.ps1
+
+# Personal setup notes (not part of the public project)
+Fraimic.Muse.README.md
+
+# Logs and local scratch
+logs/
+*.log
+*.bin
+*.bak*

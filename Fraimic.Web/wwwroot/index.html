@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#111318" />
+<title>Frame Muse</title>
+<link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Frame Muse</h1>
+    <p>Say or type what you'd like on the frame.</p>
+  </header>
+
+  <div class="banner" id="secureBanner" style="display:none">
+    🎤 To use voice, open the secure link: <a href="#" id="secureLink">https://frame.lan/</a>
+    <span class="bhint">First time only: <a href="/frame-lan.cer">install the certificate</a>, then turn on trust for it. Typing works here as-is.</span>
+  </div>
+
+  <div class="card">
+    <textarea id="prompt" placeholder="a cozy cabin in a snowy pine forest at dusk, warm lights in the windows…"></textarea>
+    <div class="stylerow">
+      <label for="style">Style</label>
+      <select id="style">
+        <option value="auto">Auto (smart)</option>
+        <option value="realistic">Realistic</option>
+        <option value="cartoon">Cartoon</option>
+        <option value="anime">Anime</option>
+        <option value="comic">Comic Book</option>
+        <option value="watercolor">Watercolor</option>
+        <option value="oil">Oil Painting</option>
+        <option value="pixel">Pixel Art</option>
+        <option value="poster">Poster / Minimal</option>
+      </select>
+    </div>
+    <div class="row">
+      <button class="mic" id="mic" title="Speak" aria-label="Speak">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+      </button>
+      <button class="mic" id="attach" title="Attach a reference photo" aria-label="Attach photo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      </button>
+      <button class="send" id="send">Generate</button>
+    </div>
+    <input type="file" id="file" accept="image/*" style="display:none" />
+    <div class="refpreview" id="refpreview">
+      <img id="refimg" alt="reference" />
+      <span>Reference photo — the AI will build on this.</span>
+      <button class="x" id="refremove" title="Remove" aria-label="Remove photo">×</button>
+    </div>
+
+    <div class="status" id="status">
+      <div class="statusbar">
+        <div class="statusline"><span class="dot" id="dot"></span><span id="statusText">Queued…</span></div>
+        <div class="sub" id="statusSub"></div>
+        <div class="track"><div class="fill" id="fill"></div></div>
+        <div class="preview" id="preview"><img id="previewImg" alt="preview" /></div>
+        <div class="pvActions" id="pvActions">
+          <button class="pvSend" id="pvSend">📤 Send to frame</button>
+          <button class="pvDiscard" id="pvDiscard">Discard</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="gallery">
+    <h2>Recently on the frame</h2>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="hint">Images generate on the studio PC and appear on the frame in a few minutes.</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# The job queue Frame Muse's web app and worker communicate through.
+# Start it with:  docker compose up -d
+# The default credentials match appsettings.json — change both together.
+services:
+  mongodb:
+    image: mongo:7
+    container_name: framemuse-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: framemuse
+      MONGO_INITDB_ROOT_PASSWORD: changeme
+    volumes:
+      - framemuse-mongo-data:/data/db
+
+volumes:
+  framemuse-mongo-data:

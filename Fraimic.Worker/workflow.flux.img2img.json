@@ -1,0 +1,49 @@
+{
+  "3": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": %SEED%,
+      "steps": %STEPS%,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": %DENOISE%,
+      "model": ["4", 0],
+      "positive": ["6", 0],
+      "negative": ["7", 0],
+      "latent_image": ["10", 0]
+    }
+  },
+  "4": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": { "ckpt_name": "flux1-schnell-fp8.safetensors" }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "inputs": { "text": "%PROMPT%", "clip": ["4", 1] }
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "inputs": { "text": "", "clip": ["4", 1] }
+  },
+  "8": {
+    "class_type": "VAEDecode",
+    "inputs": { "samples": ["3", 0], "vae": ["4", 2] }
+  },
+  "9": {
+    "class_type": "SaveImage",
+    "inputs": { "filename_prefix": "fraimic", "images": ["8", 0] }
+  },
+  "10": {
+    "class_type": "VAEEncode",
+    "inputs": { "pixels": ["12", 0], "vae": ["4", 2] }
+  },
+  "11": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "%IMAGE%" }
+  },
+  "12": {
+    "class_type": "ImageScale",
+    "inputs": { "image": ["11", 0], "upscale_method": "lanczos", "width": %WIDTH%, "height": %HEIGHT%, "crop": "center" }
+  }
+}
