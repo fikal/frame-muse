@@ -24,3 +24,5 @@ logs/
 # build artifacts / publish bundles
 publish.zip
 *.zip
+
+*.pdf
