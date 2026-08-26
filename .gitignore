@@ -20,3 +20,7 @@ logs/
 *.log
 *.bin
 *.bak*
+
+# build artifacts / publish bundles
+publish.zip
+*.zip
