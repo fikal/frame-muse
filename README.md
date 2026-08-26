@@ -67,24 +67,29 @@ credentials in `appsettings.Local.json` (gitignored) next to each app's `appsett
 
 ### 2. AI stack (on the GPU PC)
 
-1. **Ollama** — install from [ollama.com](https://ollama.com), then `ollama pull llama3.1:8b`.
-2. **ComfyUI** — clone [ComfyUI](https://github.com/comfyanonymous/ComfyUI), create a venv
-   (Python 3.12), install its requirements + a CUDA build of PyTorch.
-3. **Models** (place under `ComfyUI/models/`):
-   | File | Goes in | Source |
-   |---|---|---|
-   | `flux1-schnell-fp8.safetensors` (~17 GB) | `checkpoints/` | [Comfy-Org/flux1-schnell](https://huggingface.co/Comfy-Org/flux1-schnell) |
-   | `sd_xl_base_1.0.safetensors` (~7 GB) | `checkpoints/` | [stabilityai/stable-diffusion-xl-base-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) |
-   | `pixel-art-xl.safetensors` | `loras/` | [nerijs/pixel-art-xl](https://huggingface.co/nerijs/pixel-art-xl) |
-   | `pulid_flux_v0.9.1.safetensors` | `pulid/` | [PuLID](https://huggingface.co/guozinan/PuLID) |
-   | `inswapper_128.onnx` | `insightface/` | [ReActor models](https://huggingface.co/datasets/Gourieff/ReActor) |
-4. **Custom nodes** (into `ComfyUI/custom_nodes/`):
-   [ComfyUI_PuLID_Flux_ll](https://github.com/lldacing/ComfyUI_PuLID_Flux_ll) and
-   [ComfyUI-ReActor](https://github.com/Gourieff/ComfyUI-ReActor) — install each node's
-   `requirements.txt` into the ComfyUI venv (stop ComfyUI first). PuLID also needs
-   `facenet-pytorch` installed with `--no-deps`.
-5. **Safety service** — create a venv with [NudeNet](https://github.com/notAI-tech/NudeNet) and
-   run `nsfw-service/nsfw_service.py 8190`. The worker **blocks all images if this is down** (set
+**1. Ollama** — install from [ollama.com](https://ollama.com), then `ollama pull llama3.1:8b`.
+
+**2. ComfyUI** — clone [ComfyUI](https://github.com/comfyanonymous/ComfyUI), create a venv
+(Python 3.12), install its requirements + a CUDA build of PyTorch.
+
+**3. Models** — download these and drop each one in the listed folder under `ComfyUI/models/`:
+
+| File | Folder | Source |
+|---|---|---|
+| `flux1-schnell-fp8.safetensors` (~17 GB) | `checkpoints/` | [Comfy-Org/flux1-schnell](https://huggingface.co/Comfy-Org/flux1-schnell) |
+| `sd_xl_base_1.0.safetensors` (~7 GB) | `checkpoints/` | [stabilityai/stable-diffusion-xl-base-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) |
+| `pixel-art-xl.safetensors` | `loras/` | [nerijs/pixel-art-xl](https://huggingface.co/nerijs/pixel-art-xl) |
+| `pulid_flux_v0.9.1.safetensors` | `pulid/` | [PuLID](https://huggingface.co/guozinan/PuLID) |
+| `inswapper_128.onnx` | `insightface/` | [ReActor models](https://huggingface.co/datasets/Gourieff/ReActor) |
+
+**4. Custom nodes** (into `ComfyUI/custom_nodes/`):
+[ComfyUI_PuLID_Flux_ll](https://github.com/lldacing/ComfyUI_PuLID_Flux_ll) and
+[ComfyUI-ReActor](https://github.com/Gourieff/ComfyUI-ReActor) — install each node's
+`requirements.txt` into the ComfyUI venv (stop ComfyUI first). PuLID also needs
+`facenet-pytorch` installed with `--no-deps`.
+
+**5. Safety service** — create a venv with [NudeNet](https://github.com/notAI-tech/NudeNet) and
+run `nsfw-service/nsfw_service.py 8190`. The worker **blocks all images if this is down** (set
    `SafetyEnabled: false` to opt out).
 
 ### 3. Build and run
